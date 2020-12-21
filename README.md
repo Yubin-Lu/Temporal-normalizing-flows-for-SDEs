@@ -13,3 +13,7 @@ I also tried to approximate the data of 'IceCore Oxygen18' , but I do not know h
 See IceCore.py    
 In this code, I preprocess the data of 'IceCore Oxygen18' using this formula  
 x_normal = 100 * (x-mean(x)) / mean(x)  
+
+Part of the code is from the author of the following article  
+
+[1] Gert-Jan Both, Remy Kusters. Temporal normalizing flows. arXiv preprint arXiv:1912.09092v1, 2019.
