@@ -1,5 +1,5 @@
 # Temporal-normalizing-flows-for-SDEs
-Try to approximate the solution of Fokker-Planck equation  
+Try to approximate the solution of Fokker-Planck equation using sample paths of stochastic differential equations.  
 I have tried to run two example using temporal normalizing flows code.  
 
 Example 1  
