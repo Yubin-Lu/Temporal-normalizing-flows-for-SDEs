@@ -9,6 +9,7 @@ See TNFforDWwithBM.py
 
 
 Example 2  
-I also tried to approximate the data of 'IceCore Oxygen18' , but I do not know how to justify the result. See IceCore.py  
+I also tried to approximate the data of 'IceCore Oxygen18' , but I do not know how to justify the result.   
+See IceCore.py    
 In this code, I preprocess the data of 'IceCore Oxygen18' using this formula  
 x_normal = 100 * (x-mean(x)) / mean(x)  
