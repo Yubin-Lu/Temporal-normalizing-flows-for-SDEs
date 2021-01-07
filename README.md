@@ -14,6 +14,13 @@ See IceCore.py
 In this code, I preprocess the data of 'IceCore Oxygen18' using this formula  
 x_normal = 100 * (x-mean(x)) / mean(x)  
 
-Part of the code is from the author of the following article  
+Example 3
+Combining RealNVP with temporal normalizing flows to approximate a solution of 2-d Fokker-Planck equation, but this method still need to be improved.
+See the fold 'TNFwithRealNVP'
+
+Part of the code is from the author of the following article and GitHub repository
 
 [1] Gert-Jan Both, Remy Kusters. Temporal normalizing flows. arXiv preprint arXiv:1912.09092v1, 2019.
+
+[2] tonyduan. https://github.com/tonyduan/normalizing-flows
+
