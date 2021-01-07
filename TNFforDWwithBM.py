@@ -18,11 +18,13 @@ sns.set()
 from temporal_normalizing_flows.neural_flow import neural_flow
 from temporal_normalizing_flows.latent_distributions import gaussian
 from temporal_normalizing_flows.preprocessing import prepare_data
+from temporal_normalizing_flows.realnvp import realnvp
 
-try:
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')  # enable for GPU
-except:
-    pass
+if torch.cuda.is_available():
+    try:
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')  # enable for GPU
+    except:
+        pass
 
 
 def GeneratingData(T, dt):
@@ -40,47 +42,62 @@ def GeneratingData(T, dt):
     return t, x
 
 
-dataFile = 'density10.mat' #come from Fokker-Planck equation
-data = scio.loadmat(dataFile)
-density = data['P']
-T = 1
-dt = 0.05
-time, position = GeneratingData(T, dt) 
+if __name__ == '__main__':
 
-plt.figure(figsize=(8, 5))
-plt.plot(time, position)
+    dataFile = 'density10.mat' #come from Fokker-Planck equation
+    data = scio.loadmat(dataFile)
+    density = data['P']
+    T = 1
+    dt = 0.05
+    time, position = GeneratingData(T, dt) 
 
-plt.xlabel('t')
-plt.ylabel('x')
-plt.xlim([0, T])
-plt.show()
+    # plt.figure(figsize=(8, 5))
+    # plt.plot(time, position)
 
-frame = 10
-sns.distplot(position[frame, :], bins='auto')
-plt.title('t={}'.format(time[frame]))
-plt.show()
+    # plt.xlabel('t')
+    # plt.ylabel('x')
+    # plt.xlim([0, T])
+    # plt.show()
 
-#%% Time-dependent neural flow
-x_sample = np.linspace(-10, 10, 1000)
-t_sample = time
-dataset = prepare_data(position, time, x_sample, t_sample)
-flow = neural_flow(gaussian)
-flow.train(dataset, 10000)
+    # frame = 10
+    # sns.distplot(position[frame, :], bins='auto')
+    # plt.title('t={}'.format(time[frame]))
+    # plt.show()
 
-px, pz, jacob, z = flow.sample(dataset)
-plt.contourf(px)
-plt.xlabel('x')
-plt.ylabel('t')
+    #%% Time-dependent neural flow
+    x_sample = np.linspace(-10, 10, 1000)
+    t_sample = time
+    num_grid_points = x_sample.shape[0]*t_sample.shape[0]
 
-N = len(time)
-plt.figure(figsize=(8, 5))
-for frame in range(N):
-    if frame%5 == 0:
-        sns.distplot(position[frame, :], bins='auto',label="KDE")
-        plt.title('t={}'.format(time[frame]))
-        plt.plot(x_sample, px[frame,:],'r',label="TNF")
-        plt.plot(x_sample, density[frame,:],'g',label="True")
-        plt.legend(loc=0,ncol=1)
-        plt.xlabel('x')
-        plt.ylabel('p(x)')
-        plt.show()
+    dataset = prepare_data([time, position], [t_sample, x_sample], ['t','x'])
+    flow = realnvp(gaussian,1,2, num_grid_points, num_coupling=4)
+
+    # # Testing the forward (inference) and inverse operations of realnvp
+    # # The two tensors printed should be identical for invertibility
+    # log_px_1, log_pz_1, detjacob_1, z_1 = flow.inference(dataset)
+    # x_ = flow.inverse(z_1)
+    # dataset = dataset._replace(grid_data=x_)
+    # log_px_2, log_pz_2, detjacob_2, z_2 = flow.inference(dataset)   
+    # print(z_1[:3])
+    # print(z_2[:3])
+    # exit()
+
+    flow.train(dataset, 500)
+
+    px, pz, detjacob, z = flow.sample(dataset)
+    plt.contourf(px)
+    plt.xlabel('x')
+    plt.ylabel('t')
+
+    N = len(time)
+    plt.figure(figsize=(8, 5))
+    for frame in range(N):
+        if frame%5 == 0:
+            sns.distplot(position[frame, :], bins='auto',label="KDE")
+            plt.title('t={}'.format(time[frame]))
+            plt.plot(x_sample, px[frame,:],'r',label="TNF")
+            plt.plot(x_sample, density[frame,:],'g',label="True")
+            plt.legend(loc=0,ncol=1)
+            plt.xlabel('x')
+            plt.ylabel('p(x)')
+            plt.show()
