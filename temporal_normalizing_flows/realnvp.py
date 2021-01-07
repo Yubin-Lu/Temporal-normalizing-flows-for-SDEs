@@ -8,7 +8,7 @@ class realnvp(nn.Module):
     D_val -> Total number of dimensions in process
     Note: Component 1 of d_val is always time
     '''
-    def __init__(self, latent_distribution, d_val, D_val, num_grid_points, num_coupling=1):
+    def __init__(self, latent_distribution, d_val, D_val, num_grid_points, num_coupling=1, perturb=False):
         super().__init__()
         self.d_val = d_val # First few "unperturbed dimensions"
         self.D_val = D_val # Total number of dimensions in the flow
@@ -17,6 +17,7 @@ class realnvp(nn.Module):
 
         self.s_nets, self.t_nets, self.z0 = self.initialize_networks()
         self.latent_dist = latent_distribution
+        self.perturb = perturb
 
 
     def initialize_networks(self):
@@ -42,14 +43,30 @@ class realnvp(nn.Module):
     def forward(self, dataset):
         x_ = dataset.grid_data
 
+        self.perturb_idx = []
         for i in range(self.num_coupling):
 
             s_net = self.s_nets[i]
             t_net = self.t_nets[i]
 
             # Go from data to latent space (inference) to find z
-            xd_ = x_[:,:self.d_val]
-            xd_D = x_[:,self.d_val:]
+            # Add a perturbation here
+
+            if self.perturb:
+                
+                dim_range = 1+np.arange(self.D_val-self.d_val) # TO ensure dimension0 (i.e., time) is never scaled or translated
+                np.random.shuffle(dim_range)  
+                dim_range = np.insert(dim_range,0,0) 
+
+                xd_ = x_[:,dim_range[:self.d_val]]
+                xd_D = x_[:,dim_range[self.d_val:]]
+
+                self.perturb_idx.append(dim_range)
+            
+            else:
+
+                xd_ = x_[:,:self.d_val]
+                xd_D = x_[:,self.d_val:]
 
             s_ = s_net(xd_)
             scaling = xd_D*torch.exp(s_)
@@ -84,6 +101,14 @@ class realnvp(nn.Module):
 
         inverse_transform_range = np.arange(self.num_coupling)[::-1]
 
+        # Check for prespecified perturbations
+        if self.perturb == True:
+            try:
+                self.perturb_idx
+            except:
+                print('No forward operations yet')
+                exit()
+
         for i in inverse_transform_range:
             s_net = self.s_nets[i]
             t_net = self.t_nets[i]
@@ -91,13 +116,21 @@ class realnvp(nn.Module):
             zd_ = z_[:,0:self.d_val]
             zd_D = z_[:,self.d_val:]
 
-            xd_ = zd_
-
             t_term = t_net(zd_)
             s_term = s_net(zd_)
 
             xd_D = (zd_D - t_term)*torch.exp(-s_term)
-            z_ = torch.stack((xd_, xd_D), dim=1)[:,:,0]
+            z_ = torch.stack((zd_, xd_D), dim=1)[:,:,0]
+
+            if self.perturb:
+                rand_idx = self.perturb_idx[i]
+                zd_ = z_[:,rand_idx[0:self.d_val]]
+                zd_D = z_[:,rand_idx[self.d_val:]]
+            else:
+                zd_ = z_[:,0:self.d_val]
+                zd_D = z_[:,self.d_val:]
+
+            z_ = torch.stack((zd_, zd_D), dim=1)[:,:,0]
 
         return z_
 

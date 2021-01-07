@@ -70,16 +70,14 @@ if __name__ == '__main__':
     num_grid_points = x_sample.shape[0]*t_sample.shape[0]
 
     dataset = prepare_data([time, position], [t_sample, x_sample], ['t','x'])
-    flow = realnvp(gaussian,1,2, num_grid_points, num_coupling=4)
+    flow = realnvp(gaussian,1,2, num_grid_points, num_coupling=3, perturb=True)
 
     # # Testing the forward (inference) and inverse operations of realnvp
     # # The two tensors printed should be identical for invertibility
     # log_px_1, log_pz_1, detjacob_1, z_1 = flow.inference(dataset)
     # x_ = flow.inverse(z_1)
-    # dataset = dataset._replace(grid_data=x_)
-    # log_px_2, log_pz_2, detjacob_2, z_2 = flow.inference(dataset)   
-    # print(z_1[:3])
-    # print(z_2[:3])
+    # print(dataset.grid_data[80:83])
+    # print(x_[80:83])
     # exit()
 
     flow.train(dataset, 500)
