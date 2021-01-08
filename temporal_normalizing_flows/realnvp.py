@@ -27,12 +27,12 @@ class realnvp(nn.Module):
 
         for i in range(self.num_coupling):
             # Builds the network and the initial condition parameter for the integration.
-            s_nets.append(nn.Sequential(nn.Linear(self.d_val, 30), nn.Tanh(),
-                                    nn.Linear(30, 30),  nn.Tanh(),
+            s_nets.append(nn.Sequential(nn.Linear(self.d_val, 30), nn.BatchNorm1d(num_features=30), nn.ReLU(), 
+                                    nn.Linear(30, 30),  nn.BatchNorm1d(num_features=30), nn.ReLU(),
                                     nn.Linear(30, (self.D_val-self.d_val))))
 
-            t_nets.append(nn.Sequential(nn.Linear(self.d_val, 30),  nn.Tanh(),
-                                                nn.Linear(30, 30),  nn.Tanh(),
+            t_nets.append(nn.Sequential(nn.Linear(self.d_val, 30),  nn.BatchNorm1d(num_features=30), nn.ReLU(),
+                                                nn.Linear(30, 30),  nn.BatchNorm1d(num_features=30), nn.ReLU(),
                                                 nn.Linear(30, (self.D_val-self.d_val))))
 
         z0 = nn.Sequential(nn.Linear(1, 100), nn.Tanh(),
