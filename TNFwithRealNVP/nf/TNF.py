@@ -27,8 +27,6 @@ class FCNN(nn.Module):
             nn.Tanh(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.Tanh(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.Tanh(),
             nn.Linear(hidden_dim, out_dim),
         )
 
@@ -52,39 +50,39 @@ class RealNVP(nn.Module):
 
     def forward(self, x):
         lower, upper = x[:,0::2], x[:,1].reshape(-1, 1)
-        # print(lower.shape)
         t1_transformed = self.t1(lower)
         s1_transformed = self.s1(lower)
         lower_new = lower
         upper_new = t1_transformed + upper * torch.exp(s1_transformed)
-        z1 = torch.cat([lower_new[:,0].reshape(-1, 1), upper_new], dim=1)
-        # z1 = torch.cat([lower_new[:,0].reshape(-1, 1), upper_new, lower_new[:,1].reshape(-1, 1)], dim=1)
-        # lower1, upper1 = z1[:,0].reshape(-1, 1), z1[:,1:3]
-        # # print(lower.shape)
-        # t2_transformed = self.t2(upper1)
-        # s2_transformed = self.s2(upper1)
-        # lower_new1 = t2_transformed + lower1 * torch.exp(s2_transformed)
-        # upper_new1 = upper1
-        # z = torch.cat([lower_new1, upper_new1[:,0].reshape(-1, 1)], dim=1)
-        # # print(z.shape)
-        log_det = torch.sum(s1_transformed, dim=1)
-        return z1, log_det
+        z1 = torch.cat([lower_new[:,0].reshape(-1, 1), upper_new, lower_new[:,1].reshape(-1, 1)], dim=1)
+       
+        lower1, upper1 = z1[:,0].reshape(-1, 1), z1[:,1:3]
+        t2_transformed = self.t2(upper1)
+        s2_transformed = self.s2(upper1)
+        lower_new1 = t2_transformed + lower1 * torch.exp(s2_transformed)
+        upper_new1 = upper1
+        z = torch.cat([lower_new1, upper_new1[:,0].reshape(-1, 1)], dim=1)
+        log_det = torch.sum(s1_transformed + s2_transformed, dim=1)
+        c1 = 1/(2*3.14159265)
+        c2 = -torch.sum(z**2, 1)/2
+        pz = torch.mul(c1, torch.exp(c2))
+        log_px = torch.log(pz) + log_det
+        px = torch.exp(log_px)
+        return z, log_det, px
 
     def inverse(self, z):
-        lower, upper = z[:,0::2], z[:,1].reshape(-1, 1)
+        lower1, upper1 = z[:,0].reshape(-1, 1), z[:,1:3]
         # print(lower.shape)
+        t2_transformed = self.t2(upper1)
+        s2_transformed = self.s2(upper1)
+        lower_new1 = (lower1 - t2_transformed) * torch.exp(-s2_transformed)
+        upper_new1 = upper1 
+        x1 = torch.cat([lower_new1[:,0].reshape(-1, 1), upper_new1], dim=1)
+        lower, upper = x1[:,0::2], x1[:,1].reshape(-1, 1)
         t1_transformed = self.t1(lower)
         s1_transformed = self.s1(lower)
         lower_new = lower
-        upper_new = (upper - t1_transformed) * torch.exp(-s1_transformed)
-        x1 = torch.cat([lower_new[:,0].reshape(-1, 1), upper_new], dim=1)
-        # x1 = torch.cat([lower_new[:,0].reshape(-1, 1), upper_new, lower_new[:,1].reshape(-1, 1)], dim=1)
-        # lower1, upper1 = x1[:,0].reshape(-1, 1), x1[:,1:3]
-        # # print(lower.shape)
-        # t2_transformed = self.t2(upper1)
-        # s2_transformed = self.s2(upper1)
-        # lower_new1 = (lower1 - t2_transformed) * torch.exp(-s2_transformed)
-        # upper_new1 = upper1 
-        # x = torch.cat([lower_new, upper_new1[:,0].reshape(-1, 1)], dim=1)
-        log_det = torch.sum(-s1_transformed, dim=1)
-        return x1, log_det
+        upper_new = (upper - t1_transformed) * torch.exp(-s1_transformed)        
+        x =  torch.cat([lower_new[:,0].reshape(-1, 1), upper_new], dim=1)
+        log_det = torch.sum(-s1_transformed-s2_transformed, dim=1)
+        return x, log_det
