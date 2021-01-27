@@ -32,30 +32,42 @@ def GeneratingData(T, dt):
     x0 = X0[:,0:1]
     y0 = X0[:,1:]
     N = len(x0)
-    alpha = 2.
+    alpha = 1.5
     x = np.zeros((Nt, N))
     y = np.zeros((Nt, N))
     x[0, :] = x0.squeeze()
     y[0, :] = y0.squeeze()
     for i in range(Nt-1):
-        # Ut = dt**(1/alpha) * StableVariable(N, alpha)
-        # Vt = dt**(1/alpha) * StableVariable(N, alpha)
-        Ut = dt**(1/2) * np.random.randn(N)
-        Vt = dt**(1/2) * np.random.randn(N)
+        Ut = dt**(1/alpha) * StableVariable(N, alpha)
+        Vt = dt**(1/alpha) * StableVariable(N, alpha)
+        # Ut = dt**(1/2) * np.random.randn(N)
+        # Vt = dt**(1/2) * np.random.randn(N)
         # x[i+1, :] = x[i, :] - x[i, :]*y[i, :]*dt + 1*Ut
-        # y[i+1, :] = y[i, :] + (4*y[i, :] - 1*y[i, :]**3)*dt + 2*Vt
-        x[i+1, :] = x[i, :] + 1*(4*x[i, :] - 1*x[i, :]**3)*dt + 1*Ut
-        y[i+1, :] = y[i, :] - x[i, :]*y[i, :]*dt + 2*Vt
+        # y[i+1, :] = y[i, :] + (4*y[i, :] - 1*y[i, :]**3)*dt +1*Vt
+        # x[i+1, :] = x[i, :] + 1*(4*x[i, :] - 1*x[i, :]**3)*dt + 1*Ut
+        # y[i+1, :] = y[i, :] - x[i, :]*y[i, :]*dt + 1*Vt
+        x[i+1, :] = x[i, :] - x[i, :]*dt + x[i, :]*Ut
+        y[i+1, :] = y[i, :] + (x[i, :]**2 + y[i, :])*dt +y[i, :]*Vt
+        b=np.empty(0)
+        for j in range(500):
+            if (np.abs(x[:,j])>1e4).any() or (np.abs(y[:,j])>1e4).any():
+                b = np.append(b,j)
+        x1 = np.delete(x,b,axis=1)
+        y1 = np.delete(y,b,axis=1)
 
 
-    return t, x, y
+    return t, x1, y1
 
 
 
 def plot_data(x, **kwargs):
     plt.scatter(x[:,0], x[:,1], marker="x", **kwargs)
-    # plt.xlim((-3, 3))
-    # plt.ylim((-3, 3))
+    # plt.xlim((-5, 5))
+    # plt.ylim((-25, 25))
+    plt.xlim((-5, 5))
+    plt.ylim((-30, 30))
+    # plt.xlim((-6, 6))
+    # plt.ylim((-50, 50))
 
 
 if __name__ == "__main__":
@@ -64,7 +76,7 @@ if __name__ == "__main__":
     argparser.add_argument("--n", default=512, type=int)
     argparser.add_argument("--flows", default=1, type=int) #复合两次RealNVP
     argparser.add_argument("--flow", default="RealNVP", type=str)
-    argparser.add_argument("--iterations", default=10000, type=int)
+    argparser.add_argument("--iterations", default=20000, type=int)
     argparser.add_argument("--use-mixture", action="store_true")
     argparser.add_argument("--convolve", action="store_true")
     argparser.add_argument("--actnorm", action="store_true")
@@ -91,11 +103,13 @@ if __name__ == "__main__":
 
     for i in range(args.iterations):
         optimizer.zero_grad()
-        z, prior_logprob, log_det = model(x)
+        z, prior_logprob, log_det, px = model(x)
         logprob = prior_logprob + log_det
         loss = -torch.mean(prior_logprob + log_det)
         loss.backward()
         optimizer.step()
+    
+    #resample
     xx = np.concatenate((position_x[19:20,:].T,position_y[19:20,:].T) ,axis=1)
     plt.subplot(1, 2, 1)
     plot_data(xx, color="black", alpha=0.5)
@@ -105,8 +119,3 @@ if __name__ == "__main__":
     plot_data(samples, color="black", alpha=0.5)
     plt.title("Generated samples")
     plt.show()
-
-
-
-
-
