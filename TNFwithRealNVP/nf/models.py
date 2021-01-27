@@ -14,10 +14,10 @@ class NormalizingFlowModel(nn.Module):
         m, _ = x.shape
         log_det = torch.zeros(m)
         for flow in self.flows:
-            x, ld = flow.forward(x)
+            x, ld, px = flow.forward(x)
             log_det += ld
         z, prior_logprob = x, self.prior.log_prob(x)
-        return z, prior_logprob, log_det  
+        return z, prior_logprob, log_det, px
 
     def inverse(self, z):
         m, _ = z.shape
@@ -35,3 +35,10 @@ class NormalizingFlowModel(nn.Module):
         x, _ = self.inverse(zz)
         return x
 
+    def sample_px(self, x, t):
+        n_samples, _ = x.shape
+        time = np.ones([n_samples,1])*t
+        xx = torch.Tensor(np.concatenate((x,time),axis=1))
+        print(xx.shape)
+        z, prior_logprob, log_det, px = self.forward(xx)
+        return px
