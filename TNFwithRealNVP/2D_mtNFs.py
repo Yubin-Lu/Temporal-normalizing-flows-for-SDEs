@@ -65,12 +65,14 @@ def GeneratingData(T, dt, n_samples):
         Vt = dt**(1/alpha) * StableVariable(N, alpha)
         UUt = dt**(1/2) * np.random.randn(N)
         VVt = dt**(1/2) * np.random.randn(N)
+        # #Multimodal case
         # x[i+1, :] = x[i, :] + (8*x[i, :] - 1*x[i, :]**3)*dt + 0*x[i, :]*UUt+ 1*UUt
         # y[i+1, :] = y[i, :] + (8*y[i, :] - 1*y[i, :]**3)*dt + 0*y[i, :]*VVt + 1*VVt
+        
+        # #Unimodal case
         x[i+1, :] = x[i, :] + 1*(4*x[i, :] - 1*x[i, :]**3)*dt + x[i, :]*Ut
         y[i+1, :] = y[i, :] - x[i, :]*y[i, :]*dt + y[i, :]*Vt
-        # x[i+1, :] = x[i, :] - x[i, :]*dt + x[i, :]*UUt+ x[i, :]*Ut
-        # y[i+1, :] = y[i, :] + (x[i, :]**2 + y[i, :])*dt + y[i, :]*VVt + y[i, :]*Vt
+     
         b=np.empty(0).astype(int)
         for j in range(n_samples):
             if (np.abs(x[:,j])>1e4).any() or (np.abs(y[:,j])>1e4).any():
@@ -79,7 +81,7 @@ def GeneratingData(T, dt, n_samples):
         y1 = np.delete(y,b,axis=1)
     return t, x1, y1
 
-# Estimating baseline density 
+# #Estimating baseline density 
 def sample2density(x, u, v, du, dv):
     m, n = u.shape
     l, s =x.shape
@@ -95,11 +97,12 @@ def sample2density(x, u, v, du, dv):
 
 
 def plot_data(x, **kwargs):
-    # plt.scatter(x[:,0], x[:,1], **kwargs)
     plt.scatter(x[:,0], x[:,1], s=1, marker="o", **kwargs)
+    # #Unimodal case
     # plt.xlim((-5, 5))
     # plt.ylim((-20, 20))
-    # EX3
+    
+    # #Multimodal case
     plt.xlim((-8, 8))
     plt.ylim((-8, 8))
     plt.xlabel("x")
@@ -120,7 +123,6 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)
 
-    # start = time.time()
     flow = eval(args.flow)
     flows = [flow(dim=2) for _ in range(args.flows)]
     prior = MultivariateNormal(torch.zeros(2), torch.eye(2))
@@ -151,7 +153,7 @@ if __name__ == "__main__":
     writer.close()
     np.save('2Dloss_Ex1.npy',Loss)
     
-    # resampling
+    # Resampling
     plt.figure(figsize=(20,8))
     plt.subplot(2, 4, 1)
     xxx = np.concatenate((position_x[0:1,:].T, position_y[0:1,:].T), axis=1)
@@ -193,8 +195,10 @@ if __name__ == "__main__":
     
     
     #Comparing the baseline density with the estimated density
-    u, v = np.meshgrid(np.linspace(-20, 20, 200), np.linspace(-20, 20, 200))
-    du = 40/200
+    
+    # #The state space [-20, 20]*[-20, 20] should be large enough to cover as many samples as possible
+    u, v = np.meshgrid(np.linspace(-20, 20, 200), np.linspace(-20, 20, 200)) 
+    du = 40/200 #The space step size should not be too large
     dv = 40/200
     u1 = np.reshape(u, u.size, order='C').reshape(-1, 1)
     v1 = np.reshape(v, v.size, order='C').reshape(-1, 1)
