@@ -2,7 +2,7 @@
 """
 Created on Sun Dec 27 20:23:49 2020
 
-@author: Administrator
+@author: Yubin Lu
 """
 import numpy as np
 import itertools
