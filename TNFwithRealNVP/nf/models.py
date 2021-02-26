@@ -36,9 +36,10 @@ class NormalizingFlowModel(nn.Module):
         return x
 
     def sample_px(self, x, t):
+        #Using tNFs to estimate time-varying density p(x,t) 
         n_samples, _ = x.shape
         time = np.ones([n_samples,1])*t
         xx = torch.Tensor(np.concatenate((x,time),axis=1))
-        print(xx.shape)
+        # print(xx.shape)
         z, prior_logprob, log_det, px = self.forward(xx)
         return px
